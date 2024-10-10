@@ -1,0 +1,57 @@
+---
+title: "Predicting the Market Value of Soccer Players based on ..."
+author: "Rahil Chadha, Harnehmat Kaur, Tanmay Shinde"
+date: "October 10, 2024"
+output: 
+  pdf_document:
+    toc: true
+    toc_depth: 2
+bibliography: references.bib
+thanks: "Code and data are available at: [PredictingMarketValueOfSoccerPlayers](https://github.com/Tanmay-Shinde/Predicting-Market-Value-of-Soccer-Players)"
+number-sections: true
+urlcolor: blue
+---
+
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+
+# Loading the relevant libraries
+library(ggplot2)
+
+```
+
+# Contributions {#contributions}
+
+Rahil Chadha:
+
+Harnehmat Kaur:
+
+Tanmay Sachin Shinde:
+
+# Introduction {#introduction}
+
+
+# Data Description {#data-desc}
+
+## Source and Data Collection
+
+## Descriptive Statistics
+
+[@citeR]
+
+## Justification of Linearity
+
+
+# Ethics Discussion {#ethics}
+
+
+# Preliminary Results {#results}
+
+
+# References
+
+# 
+
+
