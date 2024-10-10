@@ -1,0 +1,50 @@
+# Load necessary libraries
+library(ggplot2)  # For plotting
+library(car)      # For additional regression diagnostics
+
+# 1. Load your data
+# Read the CSV file into a data frame
+data <- read.csv("data.csv")
+
+# 2. Fit the linear regression model
+# Replace the predictors below with the 5 you wish to use
+og_model <- lm(`predict S&P 500` ~ `VIX values` + `DJIA values` + `US3M closing values` + `EPU Monthly values` + `geopolitical index values`, data = data)
+
+# 3. Extract and round the intercept value
+intercept <- round(as.numeric(coef(og_model)[1]), 0)
+cat("Intercept of the model:", intercept, "\n")
+
+# 4. Summarize the model
+summary(og_model)
+
+# 5. Check the assumptions of the model
+y_value <- resid(og_model)
+x_value <- fitted(og_model)
+
+# Plot Residuals vs Fitted Values
+plot(x = x_value, y = y_value, main="Residual vs Fitted", xlab="Fitted", ylab="Residuals")
+abline(h = 0, lty=2, col="red")
+
+# 6. Plot Residuals vs each quantitative predictor
+par(mfrow=c(1,3))
+plot(x = data$`VIX values`, y = y_value, main="Residual vs VIX Values", xlab="VIX", ylab="Residual")
+plot(x = data$`DJIA values`, y = y_value, main="Residual vs DJIA Values", xlab="DJIA", ylab="Residual")
+plot(x = data$`US3M closing values`, y = y_value, main="Residual vs US3M Closing Values", xlab="US3M", ylab="Residual")
+
+# 7. Boxplots for categorical variable
+boxplot(y_value ~ data$`geopolitical index values`, main="Residuals vs Geopolitical Index Values", xlab="Geopolitical Index", ylab="Residuals")
+
+# 8. Create a Normal QQ plot for residuals
+qqnorm(resid(og_model))  
+qqline(resid(og_model), col = "red")  
+
+# 9. Additional Condition Checks
+y_value2 <- data$`predict S&P 500`
+x_value2 <- fitted(og_model)
+
+# Plot Response vs Fitted values
+plot(x = x_value2, y = y_value2, main="Response vs Fitted", xlab="Fitted", ylab="S&P 500")
+abline(a = 0, b = 1, lty=2, col="red")
+
+# 10. Pairwise plot between predictors
+pairs(data[,c("VIX values", "DJIA values", "US3M closing values", "EPU Monthly values", "geopolitical index values")])
