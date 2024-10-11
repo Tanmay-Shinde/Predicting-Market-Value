@@ -1,0 +1,16 @@
+\contentsline {section}{\numberline {1}Contributions}{1}{section.1}%
+\contentsline {section}{\numberline {2}Introduction}{2}{section.2}%
+\contentsline {section}{\numberline {3}Data Description}{2}{section.3}%
+\contentsline {subsection}{\numberline {3.1}Source and Data Collection}{2}{subsection.3.1}%
+\contentsline {subsection}{\numberline {3.2}Response Variable Summary}{2}{subsection.3.2}%
+\contentsline {subsection}{\numberline {3.3}Predictor Variable Summary}{3}{subsection.3.3}%
+\contentsline {subsubsection}{\numberline {3.3.1}Age}{3}{subsubsection.3.3.1}%
+\contentsline {subsubsection}{\numberline {3.3.2}Release Clause Value}{4}{subsubsection.3.3.2}%
+\contentsline {subsubsection}{\numberline {3.3.3}Sprint Speed}{5}{subsubsection.3.3.3}%
+\contentsline {subsubsection}{\numberline {3.3.4}Dribbling}{6}{subsubsection.3.3.4}%
+\contentsline {subsubsection}{\numberline {3.3.5}Position (Categorical Variable)}{7}{subsubsection.3.3.5}%
+\contentsline {section}{\numberline {4}Ethics Discussion}{8}{section.4}%
+\contentsline {section}{\numberline {5}Preliminary Results}{8}{section.5}%
+\contentsline {subsubsection}{\numberline {5.0.1}Preliminary Analysis:}{8}{subsubsection.5.0.1}%
+\contentsline {subsubsection}{\numberline {5.0.2}Checking for Violated Assumptions:}{9}{subsubsection.5.0.2}%
+\contentsline {section}{References}{14}{section*.2}%

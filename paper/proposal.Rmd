@@ -1,14 +1,14 @@
 ---
-title: "Predicting the Market Value of Soccer Players based on ..."
+title: "Predicting the Market Value of Soccer Players based on Performance Metrics"
 author: "Rahil Chadha, Harnehmat Kaur, Tanmay Shinde"
 date: "October 10, 2024"
 output: 
   pdf_document:
+    number_sections: true
     toc: true
     toc_depth: 2
 bibliography: references.bib
 thanks: "Code and data are available at: [PredictingMarketValueOfSoccerPlayers](https://github.com/Tanmay-Shinde/Predicting-Market-Value-of-Soccer-Players)"
-number-sections: true
 urlcolor: blue
 ---
 
@@ -19,39 +19,453 @@ urlcolor: blue
 
 # Loading the relevant libraries
 library(ggplot2)
+library(readr)
+library(tidyverse)
+# install.packages("kableExtra")
+library(knitr)
+library(kableExtra)
 
+# Load the data
+data <- read.csv("../data/raw_data/fifa_players.csv")
+
+# Subsetting and cleaning the data
+data <- data %>% select(value_euro, age, release_clause_euro, sprint_speed, dribbling, positions)
+
+data <- na.omit(data)
+
+data$value_euro <- data$value_euro / 1000 # Scaled down to improve readability of plots
+data$release_clause_euro <- data$release_clause_euro / 1000
+
+data$positions <- sapply(strsplit(as.character(data$positions), ","), `[`, 1)
+
+# unique(data$positions)
+
+data$position <- ifelse(data$positions %in% c("CF", "RW", "LW", "ST"), "Forward",
+                       ifelse(data$positions %in% c("CAM", "CM", "CDM", "RM", "LM"), "Midfield",
+                       ifelse(data$positions %in% c("CB", "LB", "RB", "LWB", "RWB"), "Defense",
+                       ifelse(data$positions == "GK", "Goalkeeper", NA))))
+
+data <- data %>% select(-positions)
+
+write_csv(data, "../data/analysis_data/fifa_players_cleaned.csv")
 ```
+
+
 
 # Contributions {#contributions}
 
-Rahil Chadha:
+Rahil Chadha: In this project, I came up with the research question and found the dataset, ensuring it met the project requirements. I conducted a comprehensive review of peer-reviewed literature, summarizing key findings that informed our predictors. I also outlined the justification for using linear regression, explaining its suitability for answering the research question. Additionally, I contributed to the data analysis plan and ensured the correct citation of data sources.
 
-Harnehmat Kaur:
+Harnehmat Kaur: Conducted analysis and visualization of the response variable and key predictors for estimating football player market values. Explored attributes such as age, sprint speed, agility, and release clauses to determine their impact on market value. Created visualizations to identify patterns in the data and evaluate the suitability of these predictors for inclusion in the regression model based on their distributions. Contributed to the research component by finding and reviewing relevant research papers for the project.
 
-Tanmay Sachin Shinde:
+Tanmay Sachin Shinde: Alongside my teammates, I contributed to cleaning and preparing the data for analysis. I worked on writing the code for fitting the model and performing residual analysis to assess model assumptions and summarized the conclusion made for each assumption and condition. I interpreted the results from the preliminary model in context of the research question and summarized the effect of predictors on the response variable. Additionally, I ensured the trustworthiness and ethical use of the dataset, incorporating the insights from the embedded ethics module held during our lecture. Finally, I formatted the R Markdown (.rmd) file for our submission, ensuring it was well-organized.
+
+\newpage
 
 # Introduction {#introduction}
+
+The European football transfer market is a multi-billion-euro industry, and accurately assessing a players market value is crucial for clubs aiming to make strategic decisions around team building. This project aims to predict a football players' market value based on key attributes such as the players age, on-field position, his release clause value, and performance attributes such as sprint speed, and dribbling ability. 
+
+By understanding the impact of key variables like age, position, and performance metrics on market value, clubs can strategically allocate resources and negotiate better deals. Key findings from three peer-reviewed articles in the field of sports analytics and market value determination suggest that the age of a player and market value are negatively correlated, noting that forwards peak in value between the **age** of 20-25, defenders around 27, and goalkeepers at 33 [@article1]. This paper also notes that players playing in forwards tend to have higher market values due to their goal-scoring roles, whereas midfielders and defenders are valuated less (**position**). Apart from these, the transfer fee (**release clause value**) of a player is a crucial predictor of demand and market value [@article2]. Lastly, inherent physical attributes and skills such as **sprint speed**, **dribbling skills**, and agility are also considered to be key predictors of players performance and market value [@article3].
+
+Using a linear regression model enables us to quantify how changes in performance indicators, such as age, sprint speed, dribbling skills, and release clauses impact a player's market value. Estimating a linear trend is particularly useful for our research question as it allows us to ascertain the direction and strength of the relationships between the variables. By fitting a linear model, we can derive coefficients that represent the expected change in market value associated with a one-unit change in each performance metric. In this analysis, the primary focus will be on interpretability. While precise predictions of market value are valuable, by interpreting the coefficients of the linear regression model, we can explain how specific aspects of player performance influence market valuations.
 
 
 # Data Description {#data-desc}
 
 ## Source and Data Collection
 
-## Descriptive Statistics
+The dataset for this project was obtained from Kaggle, and can be found here [Kaggle - Football Players Data](https://www.kaggle.com/datasets/maso0dahmed/football-players-data) [@masood_ahmed_2023]. The original curators of the dataset obtained the data from SoFIFA [@sofifa], a website that provides detailed player information for FIFA video game enthusiasts. The data reflects real world statistics and performance metrics of players and was originally collected to help players build teams in the FIFA video game. In our project, we use this extensive data to predict football players' market value in the real transfer market, shifting the focus from gaming to real-world applications.
 
-[@citeR]
+## Response Variable Summary
 
-## Justification of Linearity
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+
+# Summarizing the response variable: Market Value (in Euros)
+
+response_summary <- data %>% 
+  summarise(mean_market_value = mean(value_euro, na.rm = TRUE),
+            median_market_value = median(value_euro, na.rm = TRUE),
+            sd_market_value = sd(value_euro, na.rm = TRUE),
+            min_market_value = min(value_euro, na.rm = TRUE),
+            max_market_value = max(value_euro, na.rm = TRUE))
+
+# Print summary statistics
+response_summary %>%
+  kable(col.names = c("Mean Market Value", "Median Market Value", 
+                      "Standard Deviation", "Min Market Value", "Max Market Value"), 
+        caption = "Market Value Statistics (Values in Thousands of Euros)")
+```
+
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+
+# Visualizing the response variable (Market Value) in Thousands of Euros
+ggplot(data, aes(x = value_euro)) +
+  geom_histogram(binwidth = 1000, fill = "skyblue", color = "black") +
+  scale_x_continuous(limits = c(0, 1.2e5), breaks = seq(0, 1.2e5, by = 2e4)) +
+  labs(title = "Distribution of Player Market Value (in Thousands of Euros)", 
+       x = "Market Value (Thousands of Euros)", 
+       y = "Count") +
+  theme_minimal()
+
+```
+*Description*: The distribution of player market values is highly right-skewed, with most players having low values and only a few with extremely high values. This distribution suggests the presence of a few outliers or highly valued players that skew the data. 
+
+*Relevance*: This response variable is appropriate for linear regression, as market value is a central measure of player importance and performance in the football world. As seen in *papers 2 and 3*, a log transformation might stabilize the variance, making the relationship between predictors and market value clearer. Log transformations are commonly used in economic and financial data to handle skewed distributions and meet regression assumptions. The transformed variable is expected to have a more normal distribution, improving the model fit.
+
+## Predictor Variable Summary
+
+### Age
+
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+
+# Summarize Age
+age_summary <- data %>% 
+  summarise(mean_age = mean(age, na.rm = TRUE),
+            median_age = median(age, na.rm = TRUE),
+            sd_age = sd(age, na.rm = TRUE),
+            min_age = min(age, na.rm = TRUE),
+            max_age = max(age, na.rm = TRUE))
+
+age_summary %>%
+  kable(col.names = c("Mean Age", "Median Age", 
+                      "Standard Deviation", "Min Age", "Max Age"),
+        caption = "Age Summary Statistics")
+```
+
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+
+# Visualize Age Distribution
+ggplot(data, aes(x = age)) +
+  geom_histogram(binwidth = 1, fill = "coral", color = "black") +
+  scale_x_continuous(limits = c(15, 50), breaks = seq(15, 50, by = 5)) +
+  labs(title = "Distribution of Player Ages", x = "Age", y = "Count") +
+  theme_minimal()
+```
+*Description*: The age distribution is right-skewed, with most players between 20 and 30 years old. 
+
+*Relevance*: Age is an important predictor because younger players are often valued for their potential, while older players may have experience that increases their market value. *All of the research papers* conclude that there is a relationship between age and market value, and *paper 2* suggests that it is mostly a negative relationship. This variable warrants closer examination in the modelling phase.
+
+### Release Clause Value
+
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+
+# Summarize release clause value
+rc_summary <- data %>% 
+  summarise(mean_rc = mean(release_clause_euro, na.rm = TRUE),
+            median_rc = median(release_clause_euro, na.rm = TRUE),
+            sd_rc = sd(release_clause_euro, na.rm = TRUE),
+            min_rc = min(release_clause_euro, na.rm = TRUE),
+            max_rc = max(release_clause_euro, na.rm = TRUE))
+
+rc_summary %>%
+  kable(col.names = c("Mean Release Clause", "Median Release Clause", 
+                      "Standard Deviation", "Min Release Clause", "Max Release Clause"),
+        caption = "Release Clause Summary Statistics (Values in 1000s of Euros)")
+
+```
+
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+
+# Scale release_clause_euro by 100,000
+data$release_clause_scaled <- data$release_clause_euro / 1000
+
+# Visualize Distribution of Release Clause
+ggplot(data, aes(x = release_clause_scaled)) +
+    geom_histogram(bins = 30, fill = "blue", color = "black") +
+    labs(title = "Distribution of Release Clause (in Thousands of Euros)",
+         x = "Release Clause (Thousands of Euros)",
+         y = "Count")
+
+```
+
+*Description*: The distribution of release clause values is highly right-skewed, with a vast majority of players having a low release clause, while a few players have extremely high clauses. The values are now expressed in thousands of euros, which makes it easier to interpret the data, but there is still a long tail of higher values. 
+
+*Relevance*: The release clause is a direct monetary representation of the player’s perceived market worth, so it’s highly relevant for predicting the market value. This variable's relevance to our analysis is also highlighted in *paper 2*.
+
+
+### Sprint Speed
+
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+
+# Summarize sprint speed
+speed_summary <- data %>% 
+  summarise(mean_speed = mean(sprint_speed, na.rm = TRUE),
+            median_speed = median(sprint_speed, na.rm = TRUE),
+            sd_speed = sd(sprint_speed, na.rm = TRUE),
+            min_speed = min(sprint_speed, na.rm = TRUE),
+            max_speed = max(sprint_speed, na.rm = TRUE))
+
+speed_summary %>%
+  kable(col.names = c("Mean Sprint Speed", "Median Sprint Speed", 
+                      "Standard Deviation", "Min Sprint Speed", "Max Sprint Speed"),
+        caption = "Sprint Speed Summary Statistics")
+```
+
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+
+# Visualize Games Played Distribution
+ggplot(data, aes(x = sprint_speed)) +
+    geom_histogram(bins = 30, fill = "blue", color = "black") +
+    labs(title = "Distribution of Sprint Speed",
+         x = "Sprint Speed",
+         y = "Count")
+```
+*Description*: The sprint speed distribution is approximately normal but only slightly left skewed, peaking between 70 and 80. Most players have sprint speeds between 50 and 80, with very few players at the extremes. The smooth distribution makes this a well-behaved variable for linear regression. There is no obvious skewness, so transformation is likely unnecessary.
+
+*Relevance*: Sprint speed is a key performance metric that influences player value, especially for forwards and wingers. Faster players are often more valuable as they can offer more offensive opportunities. This makes sprint speed a strong predictor for market value, as seen in *paper 3* as well.
+
+
+### Dribbling
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+
+# Summarize dribbling skills
+bc_summary <- data %>% 
+  summarise(mean_dr = mean(dribbling, na.rm = TRUE),
+            median_dr = median(dribbling, na.rm = TRUE),
+            sd_dr = sd(dribbling, na.rm = TRUE),
+            min_dr = min(dribbling, na.rm = TRUE),
+            max_dr = max(dribbling, na.rm = TRUE))
+
+bc_summary %>%
+  kable(col.names = c("Mean Dribbling", "Median Dribbling", 
+                      "Standard Deviation", "Min Dribbling", "Max Dribbling"),
+        caption = "Dribbling Summary Statistics")
+```
+
+```{r, fig.width=4, fig.height=2.85, fig.align='center'}
+#| echo: false
+#| warning: false
+#| message: false
+#| 
+
+# Visualizing the Distribution of Dribbling skills
+ggplot(data, aes(x = dribbling)) +
+  geom_histogram(binwidth = 5, fill = "lightblue", color = "black") +
+  scale_x_continuous(limits = c(0, 100), breaks = seq(0, 100, by = 10)) +
+  labs(title = "Distribution of Dribbling Skills", x = "Dribbling Skills", y = "Count") +
+  theme_minimal()
+```
+
+
+*Description*: The distribution of dribbling skills has a peak around the 60-70 range. Most players have a dribbling score between 60 and 70, while fewer players have lower (below 50) or higher (above 80) scores. There are fewer players with very high scores (80+). A small number of players have very low scores, which could represent either younger, less-skilled players, or goalkeepers and defenders.
+
+*Relevance*: Dribbling  is a critical skill, especially for forwards and midfielders, and is likely to have a positive influence on market value, as seen with other similar physical attributes being used in *paper 1*. This predictor is suitable for linear regression and does not require transformation.
+
+### Position (Categorical Variable)
+```{r, fig.width=4, fig.height=2.85, fig.align='center'}
+#| echo: false
+#| warning: false
+#| message: false
+
+# Check the distribution of grouped positions
+position_group_counts <- data %>%
+  count(position) %>%
+  arrange(desc(n))
+
+# Plot the distribution of the grouped positions
+ggplot(position_group_counts, aes(x = reorder(position, -n), y = n)) +
+  geom_bar(stat = "identity", fill = "coral", color = "black") +
+  labs(title = "Distribution of Player Positions by Field Group", x = "Position Group", y = "Count") +
+  theme_minimal()
+
+```
+
+*Description*: Position data was grouped into four main categories (Midfielder, Forward, Defense, Goalkeeper) to simplify the analysis and ensure that each group has enough representation for meaningful comparisons. We can see that Midfielders are the largest group of players, followed by Defenders, Forwards, and finally Goalkeepers. 
+
+*Relevance*: This modification *aligns with the literature in papers 1 and 3*, where similar grouping strategies are used to highlight the differential impact of positions on market value.
 
 
 # Ethics Discussion {#ethics}
 
+The dataset used in this project is deemed trustworthy based on several criteria discussed in the ethics module. Firstly, the data was collected from real-world statistics and performance metrics, rather than being simulated, ensuring its relevance and applicability to our study. The metadata is adequately filled out on Kaggle, providing essential context for understanding the variables involved. Furthermore, the dataset's source, SoFIFA, is well-documented and recognized in the football community, indicating its reliability. The dataset has gained popularity and is vetted by third parties on platforms like Kaggle, enhancing its trustworthiness.
+
+From an ethical standpoint, the data pertains to public figures (football players), and informed consent is taken from these players to include their names, personal data, and performance ratings in such datasets. Thus, the dataset's creation and use align with ethical guidelines regarding privacy and consent. The SoFIFA data is already open-source and available on the website, hence the curators that prepared the data on Kaggle have adhered to the ownership rules surrounding the dataset by giving due credit to the SoFIFA website.
 
 # Preliminary Results {#results}
 
+### Preliminary Analysis:
+
+Now, we will fit a multiple linear model on the data, using `value_euro` as the response variable, which is the market value of a player in Euros, and `age`, `sprint_speed`, `dribbling`, `position`, and `release_clause_euro` as the predictors. The results of the model are as follows:
+
+```{r}
+#| echo: false
+#| eval: true
+#| warning: false
+#| message: false
+
+model <- lm(value_euro ~ `age` + `sprint_speed` + `dribbling` + `release_clause_euro` + `position` ,data = data)
+
+coefficients <- summary(model)$coefficients
+coef_table <- as.data.frame(coefficients)
+
+# Use kable to create the table
+kable(coef_table, format = "latex", booktabs = TRUE, caption = "Regression Coefficients") %>%
+  kable_styling(latex_options = c("hold_position"))
+```
+
+From fitting a preliminary model, we can see that the expected market value of a player is -686,843.4 Euros (the market value column is in 1000 of Euros) when his age, sprint speed, dribbling skills rating, release clause value are all 0 and the player plays in a Defensive position.
+
+Similarly, we can see that the expected market value of a player who is a Goalkeeper is -559,019.8 Euros (the market value column is in 1000 of Euros) when his age, sprint speed, dribbling skills rating, release clause value are all 0.
+
+The model also shows that holding all other variables constant (age, sprint_speed, release_clause_euro, and position), for each one-unit increase in the dribbling score, the player's value in euros.
+
+From the preliminary results, we can make the following conclusions:
+
+Age: The positive coefficient of 20.04 suggests that for each additional year of a player’s age, the market value increases by approximately 20,037.6 Euros. This aligns with findings in the literature, where age is often positively correlated with market value *up to a certain point in a player's career*. However, as players age beyond their peak performance years, the value may decline, indicating a nonlinear relationship not captured in our linear model.
+
+Sprint Speed and Dribbling: The coefficients of 1.39 and 3.02 respectively indicate that an increase in either corresponds to a rise in market value. Our literature review corroborates this, suggesting that speed and dribbling skills are crucial attributes for players, particularly in attacking positions for maintaining possession and creating scoring opportunities.
+
+Release Clause: The extremely high coefficient (0.51) for release clause value (since both are in 1000s of euros) indicates a strong correlation with market value, suggesting that players with higher release clauses are perceived as more valuable in the market. This finding is consistent with the concept that a player's transfer fee often reflects their on-field performance and potential, as discussed in the literature.
+
+Position: The results for different positions reveal that forwards and goalkeepers have positive coefficients, indicating higher expected market values compared to players in defensive positions. This aligns with the literature, where attacking players often command higher market values due to their direct contribution to goal-scoring, while the value of goalkeepers has gained recognition in recent years.
+
+### Checking for Violated Assumptions:
+
+First, we analyze the Residual vs Fitted plot to check if any assumptions are violated in the model.
+
+```{r}
+#| echo: false
+#| eval: true
+#| warning: false
+#| message: false
+
+y <- resid(model)
+x <- fitted(model)
+
+plot(x = x, y = y, main="Residual vs Fitted", xlab="Fitted",
+     ylab="Residuals")
+```
+
+We see a fanning pattern in the Residual vs. Fitted plot, which indicates that there is likely a violation of the constant variance assumption.
+
+
+```{r, fig.width=6, fig.height=4.1, fig.align='center'}
+#| echo: false
+#| eval: true
+#| warning: false
+#| message: false
+
+# Plotting Residuals vs each quantitative predictor
+par(mfrow=c(1,2))
+
+plot(x = data$age, y = y, main="Residual vs Player Age", xlab="Age", ylab="Residual")
+
+plot(x = data$sprint_speed, y = y, main="Residual vs Sprint Speed", xlab="Sprint Speed", ylab="Residual")
+```
+
+```{r, fig.width=6, fig.height=4.1, fig.align='center'}
+#| echo: false
+#| eval: true
+#| warning: false
+#| message: false
+
+par(mfrow=c(1,2))
+
+plot(x = data$dribbling, y = y, main="Residual vs Dribbling Skills", xlab="Dribbling Skills", ylab="Residual")
+
+plot(x = data$release_clause_euro, y = y, main="Residual vs Release Clause Value", xlab="Release Clause Value", ylab="Residual")
+
+```
+From the above plots, we can see that all the residuals vs. predictor plots show a fanning pattern indicating a violation of constant variance assumption.
+
+Now, we plot the boxplots for residuals vs. our categorical variable - player position.
+
+```{r, fig.width=6, fig.height=4.3, fig.align='center'}
+#| echo: false
+#| eval: true
+#| warning: false
+#| message: false
+
+# Boxplots for categorical variable
+boxplot(y ~ data$position, main="Residuals vs Position", xlab="Position", ylab="Residuals")
+```
+
+```{r, fig.width=6, fig.height=4.3, fig.align='center'}
+#| echo: false
+#| eval: true
+#| warning: false
+#| message: false
+
+# Boxplots for categorical variable
+boxplot(y ~ data$position, main="Residuals vs Position (excluding outliers for clarity)", xlab="Position", ylab="Residuals", outline = FALSE)
+```
+
+```{r, fig.width=6, fig.height=4.1, fig.align='center'}
+#| echo: false
+#| eval: true
+#| warning: false
+#| message: false
+
+# Creating a Normal QQ plot for residuals
+qqnorm(resid(model))  
+qqline(resid(model), col = "red") 
+
+```
+
+From the normal QQ-plot, we can see that the normality assumption is also violated.
+
+Now, we plot response vs. fitted to check if the conditional mean response condition holds.
+
+```{r, fig.width=6, fig.height=4.1, fig.align='center'}
+#| echo: false
+#| eval: true
+#| warning: false
+#| message: false
+
+plot(x = fitted(model), y = data$value_euro, main="Response vs Fitted", xlab="Fitted", ylab="Market Value")
+abline(a = 0, b = 1, lty=2, col="red")
+
+```
+From the response vs. fitted graph, we see a fairly random diagonal scatter in the plot and thus our conditional mean response condition holds. We must check the conditional mean predictor condition to ensure that our residual plots are reliable to check for violations in our assumptions.
+
+```{r}
+#| echo: false
+#| eval: true
+#| warning: false
+#| message: false
+
+# Transforming position to a numeric variable
+data$position_numeric <- ifelse(data$position == "Forward", 0,
+                       ifelse(data$position == "Midfield", 1,
+                       ifelse(data$position == "Defense", 2,
+                       ifelse(data$position == "Goalkeeper", 3, NA))))
+
+numeric_data <- data %>% select(-position)
+
+# Pairwise plot between predictors
+pairs(numeric_data[,c("age", "sprint_speed", "dribbling", "release_clause_euro", "position_numeric")])
+```
+Most of these plots have a random scatter while some show either a systemic trend/pattern. Overall, from the preliminary examination and exploratory analysis of data, we can see that some of the predictor variables have a heavy skew and certain assumptions have been violated in our model. These violations will need to be corrected before proceeding with further analysis or making any conclusions from the model.
+
+
+\newpage
 
 # References
-
-# 
-
-
